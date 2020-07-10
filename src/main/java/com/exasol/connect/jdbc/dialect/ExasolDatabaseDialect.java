@@ -3,8 +3,11 @@ package com.exasol.connect.jdbc.dialect;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -86,6 +89,50 @@ public class ExasolDatabaseDialect extends GenericDatabaseDialect {
       default:
         return super.getSqlType(field);
     }
+  }
+
+  /**
+   * Based on:
+   * - https://docs.exasol.com/sql_references/data_types/datatypealiases.htm
+   */
+  @Override
+  protected Integer getSqlTypeForSchema(Schema schema) {
+    if (schema.name() != null) {
+      switch (schema.name()) {
+        case Date.LOGICAL_NAME:
+          return Types.DATE;
+        case Decimal.LOGICAL_NAME:
+          return Types.DECIMAL;
+        // case Time.LOGICAL_NAME:
+        // TIME is not supported (-> INT32)
+        case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME:
+          return Types.TIMESTAMP;
+        default:
+          // fall through to normal types
+      }
+    }
+    switch (schema.type()) {
+      case INT8:
+        return Types.TINYINT;
+      case INT16:
+        return Types.SMALLINT;
+      case INT32:
+        return Types.INTEGER;
+      case INT64:
+        return Types.BIGINT;
+      case FLOAT32:
+        return Types.FLOAT;
+      case FLOAT64:
+        return Types.DOUBLE;
+      case BOOLEAN:
+        return Types.BOOLEAN;
+      case STRING:
+        return Types.VARCHAR;
+      // case BYTES:
+      // BYTES not supported
+      default:
+    }
+    return super.getSqlTypeForSchema(schema);
   }
 
   @Override

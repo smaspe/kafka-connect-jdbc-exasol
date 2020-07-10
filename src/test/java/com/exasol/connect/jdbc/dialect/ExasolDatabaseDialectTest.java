@@ -13,10 +13,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.Arrays;
 import java.util.List;
 
 import io.confluent.connect.jdbc.dialect.BaseDialectTest;
 import io.confluent.connect.jdbc.util.TableId;
+import org.mockito.Matchers;
 
 import static org.junit.Assert.assertEquals;
 
@@ -200,4 +205,22 @@ public class ExasolDatabaseDialectTest extends BaseDialectTest<ExasolDatabaseDia
     assertEquals(expected, sql);
   }
 
+  @Test
+  @Override
+  public void bindFieldNull() throws SQLException {
+    int index = 0;
+    verifyBindField(++index, Schema.INT8_SCHEMA, null).setNull(index, Types.TINYINT);
+    verifyBindField(++index, Schema.INT16_SCHEMA, null).setNull(index, Types.SMALLINT);
+    verifyBindField(++index, Schema.INT32_SCHEMA, null).setNull(index, Types.INTEGER);
+    verifyBindField(++index, Schema.INT64_SCHEMA, null).setNull(index, Types.BIGINT);
+    verifyBindField(++index, Schema.FLOAT32_SCHEMA, null).setNull(index, Types.FLOAT);
+    verifyBindField(++index, Schema.FLOAT64_SCHEMA, null).setNull(index, Types.DOUBLE);
+    verifyBindField(++index, Schema.BOOLEAN_SCHEMA, null).setNull(index, Types.BOOLEAN);
+    verifyBindField(++index, Schema.BYTES_SCHEMA, null).setObject(index, null);
+    verifyBindField(++index, Schema.STRING_SCHEMA, null).setNull(index, Types.VARCHAR);
+    verifyBindField(++index, Decimal.schema(0), null).setNull(index, Types.DECIMAL);
+    verifyBindField(++index, Date.SCHEMA, null).setNull(index, Types.DATE);
+    verifyBindField(++index, Time.SCHEMA, null).setNull(index, Types.INTEGER);
+    verifyBindField(++index, Timestamp.SCHEMA, null).setNull(index, Types.TIMESTAMP);
+  }
 }
