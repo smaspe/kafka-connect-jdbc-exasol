@@ -1,17 +1,23 @@
 package com.exasol.connect.jdbc.dialect;
 
+import io.confluent.connect.jdbc.source.JdbcSourceConnectorConfig;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.dialect.DatabaseDialectProvider.SubprotocolBasedProvider;
@@ -49,6 +55,35 @@ public class ExasolDatabaseDialect extends GenericDatabaseDialect {
    */
   public ExasolDatabaseDialect(AbstractConfig config) {
     super(config, new IdentifierRules(".", "\"", "\""));
+  }
+
+  private static final ConcurrentMap<List<String>, Connection> CONNECTIONS = new ConcurrentHashMap<>();
+  private static <T extends Exception, R> R sneakyThrow(Callable<R> t) throws T {
+    try {
+      return t.call();
+    }catch (Exception e) {
+      throw (T) t;
+    }
+  }
+
+  // TODO Add counter to enable closing the connection when no longer used by any sink
+  // TODO Manage pooling of connections
+  @Override
+  public Connection getConnection() throws SQLException {
+    return CONNECTIONS.computeIfAbsent(
+            Arrays.asList(
+                    config.getString(JdbcSourceConnectorConfig.CONNECTION_USER_CONFIG),
+                    config.getString(JdbcSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG),
+                    jdbcUrl),
+            url -> sneakyThrow(super::getConnection));
+  }
+
+  @Override
+  public void close() {
+    // Don't actually close.
+    // TODO handle this better: cached connection provider closes connections when deemed no longer valid,
+    // so we need a mechanism to close connections anyway
+    //super.close();
   }
 
   @Override
